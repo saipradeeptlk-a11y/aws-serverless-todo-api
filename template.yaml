@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  aws-serverless-todo-api
+
+  Sample SAM Template for aws-serverless-todo-api
+  
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: nodejs22.x
+    Environment:
+      Variables:
+        TABLE_NAME: TasksTable
+        DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+  Api:
+    Cors:
+      AllowOrigin: "'http://localhost:5173'" 
+      AllowHeaders: "'Content-Type'"
+      AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+
+
+
+Resources:
+ 
+  CreateTaskFunction:
+     Type: AWS::Serverless::Function
+     Properties:
+        CodeUri: src/
+        Handler: createTask.handler
+        Events:
+           CreateTask:
+            Type: Api
+            Properties:
+              Path: /tasks
+              Method: post
+  GetTaskFunction:
+     Type: AWS::Serverless::Function
+     Properties:
+        CodeUri: src/
+        Handler: getTasks.handler
+        Events:
+            GetTask:
+              Type: Api
+              Properties:
+                 Path: /tasks
+                 Method: get
+  UpdateTaskFunction:
+     Type: AWS::Serverless::Function
+     Properties:
+        CodeUri: src/
+        Handler: updateTask.handler
+        Events:
+            UpdateTask:
+              Type: Api
+              Properties:
+                 Path: /tasks/{id}
+                 Method: put
+  DeleteTaskFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+            CodeUri: src/
+            Handler: deleteTask.handler
+            Events:
+                DeleteTask:
+                  Type: Api
+                  Properties:
+                    Path: /tasks/{id}
+                    Method: delete
+       
+       
+
+
+
