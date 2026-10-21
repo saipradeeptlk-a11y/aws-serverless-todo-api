@@ -20,8 +20,7 @@ resolve_s3 = true
 stack_name = "todo-api"
 s3_prefix = "todo-api"
 region = "ap-south-1"
-parameter_overrides = "TableName=\"TasksTable\" DynamoEndpoint=\"\" FrontendOrigin=\https://aws-serverless-todo-api-phi.vercel.app/\""
-image_repositories = []
+parameter_overrides = "TableName=\"TasksTable\" DynamoEndpoint=\"\" FrontendOrigin=\"https://aws-serverless-todo-api-phi.vercel.app\""
 
 [default.package.parameters]
 resolve_s3 = true

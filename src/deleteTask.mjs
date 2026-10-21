@@ -1,7 +1,13 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 
-const Client = new DynamoDBClient({endpoint: process.env.DYNAMODB_ENDPOINT})
+const headers = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN,
+};
+
+
+const Client = new DynamoDBClient({endpoint: process.env.DYNAMODB_ENDPOINT || undefined})
 const docClient = DynamoDBDocumentClient.from(Client);
 
 export const handler = async(event)=>{
@@ -17,7 +23,7 @@ export const handler = async(event)=>{
 
        const response = {
            statusCode:200,
-           headers: { "Content-Type": "application/json" },
+           headers: headers,
            body: JSON.stringify({ message: "successfully deleted the item" })
        }
 
@@ -26,7 +32,7 @@ export const handler = async(event)=>{
         console.log(err)
         const response = {
            statusCode:500,
-           headers: { "Content-Type": "application/json" },
+           headers: headers,
            body: JSON.stringify({ error: "could not delete" })
        }
        return response;

@@ -3,73 +3,108 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   aws-serverless-todo-api
 
-  Sample SAM Template for aws-serverless-todo-api
-  
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+  Serverless to-do API using AWS SAM, Lambda, API Gateway and DynamoDB
+
+Parameters:
+  TableName:
+    Type: String
+    Default: TasksTable
+  DynamoEndpoint:
+    Type: String
+    Default: ""
+  FrontendOrigin:
+    Type: String
+    Default: http://localhost:5173
+
 Globals:
   Function:
     Timeout: 10
     Runtime: nodejs22.x
     Environment:
       Variables:
-        TABLE_NAME: TasksTable
-        DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+        TABLE_NAME: !Ref TableName
+        DYNAMODB_ENDPOINT: !Ref DynamoEndpoint
+        ALLOWED_ORIGIN: !Ref FrontendOrigin
   Api:
     Cors:
-      AllowOrigin: "'http://localhost:5173'" 
+      AllowOrigin: !Sub "'${FrontendOrigin}'"
       AllowHeaders: "'Content-Type'"
       AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
 
-
-
 Resources:
- 
+  TasksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
   CreateTaskFunction:
-     Type: AWS::Serverless::Function
-     Properties:
-        CodeUri: src/
-        Handler: createTask.handler
-        Events:
-           CreateTask:
-            Type: Api
-            Properties:
-              Path: /tasks
-              Method: post
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: createTask.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName
+      Events:
+        CreateTask:
+          Type: Api
+          Properties:
+            Path: /tasks
+            Method: post
+
   GetTaskFunction:
-     Type: AWS::Serverless::Function
-     Properties:
-        CodeUri: src/
-        Handler: getTasks.handler
-        Events:
-            GetTask:
-              Type: Api
-              Properties:
-                 Path: /tasks
-                 Method: get
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: getTasks.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TableName
+      Events:
+        GetTask:
+          Type: Api
+          Properties:
+            Path: /tasks
+            Method: get
+
   UpdateTaskFunction:
-     Type: AWS::Serverless::Function
-     Properties:
-        CodeUri: src/
-        Handler: updateTask.handler
-        Events:
-            UpdateTask:
-              Type: Api
-              Properties:
-                 Path: /tasks/{id}
-                 Method: put
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: updateTask.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName
+      Events:
+        UpdateTask:
+          Type: Api
+          Properties:
+            Path: /tasks/{id}
+            Method: put
+
   DeleteTaskFunction:
-      Type: AWS::Serverless::Function
-      Properties:
-            CodeUri: src/
-            Handler: deleteTask.handler
-            Events:
-                DeleteTask:
-                  Type: Api
-                  Properties:
-                    Path: /tasks/{id}
-                    Method: delete
-       
-       
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: deleteTask.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName
+      Events:
+        DeleteTask:
+          Type: Api
+          Properties:
+            Path: /tasks/{id}
+            Method: delete
 
-
-
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
