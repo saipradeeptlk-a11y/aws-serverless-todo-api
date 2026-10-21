@@ -24,6 +24,7 @@ Globals:
       Variables:
         TABLE_NAME: !Ref TableName
         DYNAMODB_ENDPOINT: !Ref DynamoEndpoint
+        ALLOWED_ORIGIN: !Ref FrontendOrigin
   Api:
     Cors:
       AllowOrigin: !Sub "'${FrontendOrigin}'"

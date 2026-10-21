@@ -2,6 +2,11 @@ import {DynamoDBClient} from "@aws-sdk/client-dynamodb";
 import {PutCommand,DynamoDBDocumentClient} from "@aws-sdk/lib-dynamodb";
 import {randomUUID} from "node:crypto";
 
+const headers = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN,
+};
+
 const client = new DynamoDBClient({endpoint: process.env.DYNAMODB_ENDPOINT || undefined});
 const docClient = DynamoDBDocumentClient.from(client);
 
@@ -16,7 +21,7 @@ export const handler = async (event) => {
         if(!d || !d.title || !d.status){
             const response = {
                 statusCode: 400,
-                headers: { "Content-Type": "application/json" },
+                headers: headers,
                 body: JSON.stringify({
                     message: 'Some of the data is missing in the request'
                 })
@@ -26,7 +31,7 @@ export const handler = async (event) => {
         if(!(validStatus.includes(d.status))){
             const response = {
                 statusCode: 400,
-                headers: { "Content-Type": "application/json" },
+                headers: headers,
                 body: JSON.stringify({
                     message: 'The status is invalid'
                 })
@@ -37,7 +42,7 @@ export const handler = async (event) => {
         console.log(err);
         return {
             statusCode: 400,
-            headers: { "Content-Type": "application/json" },
+            headers: headers,
             body: JSON.stringify({
                 message: "Invalid JSON in request body"
             })
@@ -58,7 +63,7 @@ export const handler = async (event) => {
         }));
         const response = {
             statusCode: 201,
-            headers: { "Content-Type": "application/json" },
+            headers: headers,
             body: JSON.stringify(task)
         };
         return response;
@@ -66,7 +71,7 @@ export const handler = async (event) => {
         console.log(err);
         return {
             statusCode: 500,
-            headers: { "Content-Type": "application/json" },
+            headers: headers,
             body: JSON.stringify({
                 message: "Could not save the task"
             })
