@@ -2,7 +2,7 @@ import {DynamoDBClient} from "@aws-sdk/client-dynamodb";
 import {PutCommand,DynamoDBDocumentClient} from "@aws-sdk/lib-dynamodb";
 import {randomUUID} from "node:crypto";
 
-const client = new DynamoDBClient({endpoint: process.env.DYNAMODB_ENDPOINT});
+const client = new DynamoDBClient({endpoint: process.env.DYNAMODB_ENDPOINT || undefined});
 const docClient = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event) => {

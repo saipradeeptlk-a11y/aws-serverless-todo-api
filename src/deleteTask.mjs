@@ -1,7 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 
-const Client = new DynamoDBClient({endpoint: process.env.DYNAMODB_ENDPOINT})
+const Client = new DynamoDBClient({endpoint: process.env.DYNAMODB_ENDPOINT || undefined})
 const docClient = DynamoDBDocumentClient.from(Client);
 
 export const handler = async(event)=>{

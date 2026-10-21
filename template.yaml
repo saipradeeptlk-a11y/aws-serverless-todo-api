@@ -4,6 +4,17 @@ Description: >
   aws-serverless-todo-api
 
   Sample SAM Template for aws-serverless-todo-api
+
+Parameters:
+  TableName:
+    Type: String
+    Default: TasksTable
+  DynamoEndpoint:
+    Type: String
+    Default: ""
+  FrontendOrigin:
+    Type: String
+    Default: http://localhost:5173  
   
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:

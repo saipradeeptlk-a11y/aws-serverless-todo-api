@@ -2,7 +2,7 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
 
 
-const client = new DynamoDBClient({endpoint: process.env.DYNAMODB_ENDPOINT})
+const client = new DynamoDBClient({endpoint: process.env.DYNAMODB_ENDPOINT || undefined})
 const docClient = DynamoDBDocumentClient.from(client);
 
 export const handler = async () =>{
