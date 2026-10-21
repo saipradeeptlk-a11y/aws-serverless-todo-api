@@ -23,18 +23,29 @@ Globals:
     Runtime: nodejs22.x
     Environment:
       Variables:
-        TABLE_NAME: TasksTable
-        DYNAMODB_ENDPOINT: http://dynamodb-local:8000
+        TABLE_NAME: !Ref TableName
+        DYNAMODB_ENDPOINT: !Ref DynamoEndpoint
   Api:
     Cors:
-      AllowOrigin: "'http://localhost:5173'" 
+      AllowOrigin: !Sub "'${FrontendOrigin}'"
       AllowHeaders: "'Content-Type'"
       AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
 
 
 
 Resources:
- 
+
+  TasksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH 
   CreateTaskFunction:
      Type: AWS::Serverless::Function
      Properties:
@@ -46,6 +57,9 @@ Resources:
             Properties:
               Path: /tasks
               Method: post
+        Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName     
   GetTaskFunction:
      Type: AWS::Serverless::Function
      Properties:
@@ -56,7 +70,10 @@ Resources:
               Type: Api
               Properties:
                  Path: /tasks
-                 Method: get
+                 Method: 
+        Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TableName         
   UpdateTaskFunction:
      Type: AWS::Serverless::Function
      Properties:
@@ -68,6 +85,9 @@ Resources:
               Properties:
                  Path: /tasks/{id}
                  Method: put
+        Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName           
   DeleteTaskFunction:
       Type: AWS::Serverless::Function
       Properties:
@@ -79,6 +99,13 @@ Resources:
                   Properties:
                     Path: /tasks/{id}
                     Method: delete
+            Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TableName     
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"             
        
        
 
