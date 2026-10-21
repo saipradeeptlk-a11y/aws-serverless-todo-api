@@ -4,6 +4,7 @@ version = 0.1
 
 [default.global.parameters]
 stack_name = "aws-serverless-todo-api"
+region = "ap-south-1"
 
 [default.build.parameters]
 cached = true
@@ -16,6 +17,11 @@ lint = true
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
+stack_name = "todo-api"
+s3_prefix = "todo-api"
+region = "ap-south-1"
+parameter_overrides = "TableName=\"TasksTable\" DynamoEndpoint=\"\" FrontendOrigin=\https://aws-serverless-todo-api-phi.vercel.app/\""
+image_repositories = []
 
 [default.package.parameters]
 resolve_s3 = true
