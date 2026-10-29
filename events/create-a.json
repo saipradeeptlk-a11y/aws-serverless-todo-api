@@ -1,0 +1,4 @@
+{
+  "body": "{\"title\":\"My first task\",\"status\":\"pending\"}",
+  "requestContext": { "authorizer": { "claims": { "sub": "user-a-123" } } }
+}

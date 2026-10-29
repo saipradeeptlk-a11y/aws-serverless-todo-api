@@ -13,47 +13,52 @@ const docClient = DynamoDBDocumentClient.from(client);
 export const handler = async (event) => {
     const validStatus = ["completed","pending","not_started"];
 
-    let d;   
+    // 1. who is calling? (401 if we can't tell)
+    const userId = event?.requestContext?.authorizer?.claims?.sub;
+    if(!userId){
+        return {
+            statusCode: 401,
+            headers: headers,
+            body: JSON.stringify({ message: "The user id is missing" })
+        };
+    }
 
+    // 2. read the body
+    let d;
     try{
-        d = JSON.parse(event.body);   
-
-        if(!d || !d.title || !d.status){
-            const response = {
-                statusCode: 400,
-                headers: headers,
-                body: JSON.stringify({
-                    message: 'Some of the data is missing in the request'
-                })
-            };
-            return response;
-        }
-        if(!(validStatus.includes(d.status))){
-            const response = {
-                statusCode: 400,
-                headers: headers,
-                body: JSON.stringify({
-                    message: 'The status is invalid'
-                })
-            };
-            return response;
-        }
+        d = JSON.parse(event.body);
     }catch(err){
         console.log(err);
         return {
             statusCode: 400,
             headers: headers,
-            body: JSON.stringify({
-                message: "Invalid JSON in request body"
-            })
+            body: JSON.stringify({ message: "Invalid JSON in request body" })
         };
     }
 
+    // 3. validate the data
+    if(!d || typeof d.title !== "string" || !d.title.trim() || !d.status){
+        return {
+            statusCode: 400,
+            headers: headers,
+            body: JSON.stringify({ message: "title and status are required" })
+        };
+    }
+    if(!validStatus.includes(d.status)){
+        return {
+            statusCode: 400,
+            headers: headers,
+            body: JSON.stringify({ message: "The status is invalid" })
+        };
+    }
+
+    // 4. build the task: userId comes from the token, never from the body
     const task = {
         id: randomUUID(),
-        title: d.title,
+        title: d.title.trim(),
         status: d.status,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        userId: userId
     };
 
     try{
@@ -61,20 +66,17 @@ export const handler = async (event) => {
             TableName: process.env.TABLE_NAME,
             Item: task
         }));
-        const response = {
+        return {
             statusCode: 201,
             headers: headers,
             body: JSON.stringify(task)
         };
-        return response;
     }catch(err){
         console.log(err);
         return {
             statusCode: 500,
             headers: headers,
-            body: JSON.stringify({
-                message: "Could not save the task"
-            })
+            body: JSON.stringify({ message: "Could not save the task" })
         };
     }
 };

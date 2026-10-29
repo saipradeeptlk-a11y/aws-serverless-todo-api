@@ -1,0 +1,5 @@
+{
+  "pathParameters": { "id": "f496dd53-d902-40c3-87a2-a9dafda42870" },
+  "body": "{\"status\":\"completed\"}",
+  "requestContext": { "authorizer": { "claims": { "sub": "user-a-123" } } }
+}
