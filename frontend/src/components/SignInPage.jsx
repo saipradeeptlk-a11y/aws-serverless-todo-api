@@ -53,6 +53,16 @@ export function SignInPage({setLogStatus}){
              console.log(err)
         }
     }
+    async function handleEcon(e){
+        e.preventDefault();
+        try{
+            await emailConfirmation(username,code);
+            setMode("SignIn")
+        }catch(err){
+             setErr(err.message);
+             console.log(err)
+        }
+    }
     async function handleSignUp(e){
     e.preventDefault();
     setErr("");
