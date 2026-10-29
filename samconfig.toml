@@ -19,7 +19,7 @@ confirm_changeset = true
 resolve_s3 = true
 stack_name = "todo-api-auth"
 s3_prefix = "todo-api-auth"
-parameter_overrides = "TableName=\"TasksTableAuth\" DynamoEndpoint=\"\" FrontendOrigin=\"http://localhost:5173\" CognitoUserPoolName=\"TodoUserPool\" CognitoUserPoolClientName=\"TodoFrontendClient\""
+parameter_overrides = "TableName=\"TasksTableAuth\" DynamoEndpoint=\"\" FrontendOrigin=\"https://aws-serverless-todo-api-phi.vercel.app\" CognitoUserPoolName=\"TodoUserPool\" CognitoUserPoolClientName=\"TodoFrontendClient\""
 image_repositories = []
 
 [default.package.parameters]
@@ -41,7 +41,7 @@ s3_prefix = "todo-api-auth"
 region = "ap-south-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "TableName=\"TasksTableAuth\" DynamoEndpoint=\"\" FrontendOrigin=\"http://localhost:5173\" CognitoUserPoolName=\"TodoUserPool\" CognitoUserPoolClientName=\"TodoFrontendClient\""
+parameter_overrides = "TableName=\"TasksTableAuth\" DynamoEndpoint=\"\" FrontendOrigin=\"https://aws-serverless-todo-api-phi.vercel.app\" CognitoUserPoolName=\"TodoUserPool\" CognitoUserPoolClientName=\"TodoFrontendClient\""
 image_repositories = []
 
 [auth.global.parameters]
