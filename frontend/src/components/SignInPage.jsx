@@ -77,7 +77,9 @@ export function SignInPage({setLogStatus}){
         setErr(err.message);
         console.log(err)
     }
-     async function handleResend(e){
+    
+   }
+   async function handleResend(e){
        e.preventDefault(e);
        try{
           await resendCode(username);
@@ -88,7 +90,6 @@ export function SignInPage({setLogStatus}){
               
        }
     }
-   }
     if(mode === "SignUp"){
         return(
         <div className="auth">
