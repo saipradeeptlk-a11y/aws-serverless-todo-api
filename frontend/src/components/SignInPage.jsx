@@ -77,6 +77,17 @@ export function SignInPage({setLogStatus}){
         setErr(err.message);
         console.log(err)
     }
+     async function handleResend(e){
+       e.preventDefault(e);
+       try{
+          await resendCode(username);
+       }catch(err){
+             setErr(err.message);
+             console.log(err)
+
+              
+       }
+    }
    }
     if(mode === "SignUp"){
         return(
