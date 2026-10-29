@@ -1,0 +1,7 @@
+[
+  {
+    "IndexName": "UserIdIndex",
+    "KeySchema": [{ "AttributeName": "userId", "KeyType": "HASH" }],
+    "Projection": { "ProjectionType": "ALL" }
+  }
+]

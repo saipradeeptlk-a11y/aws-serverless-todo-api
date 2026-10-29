@@ -15,6 +15,12 @@ Parameters:
   FrontendOrigin:
     Type: String
     Default: http://localhost:5173
+  CognitoUserPoolName:
+    Type: String
+    Default: TodoUserPool
+  CognitoUserPoolClientName:
+    Type: String
+    Default: TodoFrontendClient  
 
 Globals:
   Function:
@@ -28,7 +34,7 @@ Globals:
   Api:
     Cors:
       AllowOrigin: !Sub "'${FrontendOrigin}'"
-      AllowHeaders: "'Content-Type'"
+      AllowHeaders: "'Content-Type,Authorization'"
       AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
 
 Resources:
@@ -40,9 +46,33 @@ Resources:
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
+      GlobalSecondaryIndexes:
+      - IndexName: UserIdIndex
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        Projection:
+          ProjectionType: ALL
+  TodoApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: !Sub "'${FrontendOrigin}'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt MyCognitoUserPool.Arn
 
   CreateTaskFunction:
     Type: AWS::Serverless::Function
@@ -56,6 +86,7 @@ Resources:
         CreateTask:
           Type: Api
           Properties:
+            RestApiId: !Ref TodoApi
             Path: /tasks
             Method: post
 
@@ -71,6 +102,7 @@ Resources:
         GetTask:
           Type: Api
           Properties:
+            RestApiId: !Ref TodoApi
             Path: /tasks
             Method: get
 
@@ -86,6 +118,7 @@ Resources:
         UpdateTask:
           Type: Api
           Properties:
+            RestApiId: !Ref TodoApi
             Path: /tasks/{id}
             Method: put
 
@@ -101,10 +134,49 @@ Resources:
         DeleteTask:
           Type: Api
           Properties:
+            RestApiId: !Ref TodoApi
             Path: /tasks/{id}
             Method: delete
+  MyCognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Ref CognitoUserPoolName
+
+      UsernameAttributes:
+        - email
+
+      AutoVerifiedAttributes:
+        - email
+
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+
+  MyCognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref MyCognitoUserPool
+      ClientName: !Ref CognitoUserPoolClientName
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH       
 
 Outputs:
   ApiUrl:
     Description: API Gateway endpoint URL
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+    Value: !Sub "https://${TodoApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref MyCognitoUserPool
+
+  UserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref MyCognitoUserPoolClient  

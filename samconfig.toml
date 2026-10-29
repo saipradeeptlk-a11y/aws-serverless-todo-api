@@ -17,10 +17,10 @@ lint = true
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = true
 resolve_s3 = true
-stack_name = "todo-api"
-s3_prefix = "todo-api"
-region = "ap-south-1"
-parameter_overrides = "TableName=\"TasksTable\" DynamoEndpoint=\"\" FrontendOrigin=\"https://aws-serverless-todo-api-phi.vercel.app\""
+stack_name = "todo-api-auth"
+s3_prefix = "todo-api-auth"
+parameter_overrides = "TableName=\"TasksTableAuth\" DynamoEndpoint=\"\" FrontendOrigin=\"https://aws-serverless-todo-api-phi.vercel.app\" CognitoUserPoolName=\"TodoUserPool\" CognitoUserPoolClientName=\"TodoFrontendClient\""
+image_repositories = []
 
 [default.package.parameters]
 resolve_s3 = true
@@ -33,3 +33,16 @@ warm_containers = "EAGER"
 
 [default.local_start_lambda.parameters]
 warm_containers = "EAGER"
+
+[auth.deploy.parameters]
+stack_name = "todo-api-auth"
+resolve_s3 = true
+s3_prefix = "todo-api-auth"
+region = "ap-south-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "TableName=\"TasksTableAuth\" DynamoEndpoint=\"\" FrontendOrigin=\"https://aws-serverless-todo-api-phi.vercel.app\" CognitoUserPoolName=\"TodoUserPool\" CognitoUserPoolClientName=\"TodoFrontendClient\""
+image_repositories = []
+
+[auth.global.parameters]
+region = "ap-south-1"
