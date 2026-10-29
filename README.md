@@ -1,127 +1,139 @@
-# aws-serverless-todo-api
+# Serverless To-Do App with Login
 
-This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
+A to-do app where every user has their own private task list. The backend is fully serverless on AWS (API Gateway, Lambda, DynamoDB, Cognito) and the frontend is a React app hosted on Vercel.
 
-- hello-world - Code for the application's Lambda function.
-- events - Invocation events that you can use to invoke the function.
-- hello-world/tests - Unit tests for the application code. 
-- template.yaml - A template that defines the application's AWS resources.
+**Live demo:** https://aws-serverless-todo-api-phi.vercel.app
 
-The application uses several AWS resources, including Lambda functions and an API Gateway API. These resources are defined in the `template.yaml` file in this project. You can update the template to add AWS resources through the same deployment process that updates your application code.
+## Features
 
-If you prefer to use an integrated development environment (IDE) to build and test your application, you can use the AWS Toolkit.  
-The AWS Toolkit is an open source plug-in for popular IDEs that uses the SAM CLI to build and deploy serverless applications on AWS. The AWS Toolkit also adds a simplified step-through debugging experience for Lambda function code. See the following links to get started.
+- Sign up with email and password, confirmed with a 6-digit code sent by email
+- Sign in, sign out, and stay signed in across page reloads
+- Forgot password: request a code by email, then set a new one
+- Create, update (status) and delete tasks
+- Each user only sees and changes their own tasks
+- Choose a colour theme
 
-* [CLion](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [GoLand](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [IntelliJ](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [WebStorm](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [Rider](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [PhpStorm](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [PyCharm](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [RubyMine](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [DataGrip](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-* [VS Code](https://docs.aws.amazon.com/toolkit-for-vscode/latest/userguide/welcome.html)
-* [Visual Studio](https://docs.aws.amazon.com/toolkit-for-visual-studio/latest/user-guide/welcome.html)
+## Architecture
 
-## Deploy the sample application
+```
+React (Vite) on Vercel
+        |  HTTPS, ID token in the Authorization header
+        v
+API Gateway (REST) -- Cognito authorizer checks the token
+        |
+        v
+Lambda (Node.js 22): createTask, getTasks, updateTask, deleteTask
+        |
+        v
+DynamoDB: TasksTableAuth (index: UserIdIndex)
+```
 
-The Serverless Application Model Command Line Interface (SAM CLI) is an extension of the AWS CLI that adds functionality for building and testing Lambda applications. It uses Docker to run your functions in an Amazon Linux environment that matches Lambda. It can also emulate your application's build environment and API.
+| Service | Why it is used |
+|---|---|
+| Cognito user pool | Stores users, handles sign-up, email confirmation, sign-in and password reset |
+| API Gateway | Public HTTPS entry point; rejects requests without a valid token before any code runs |
+| Lambda | Runs the four task handlers only when a request arrives |
+| DynamoDB | Stores tasks; the `UserIdIndex` index lets a user's tasks be queried by `userId` |
+| SAM / CloudFormation | Defines all of the above in `template.yaml` so it can be deployed repeatably |
+| Vercel | Builds and hosts the React frontend |
 
-To use the SAM CLI, you need the following tools.
+Region: `ap-south-1`.
 
-* SAM CLI - [Install the SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
-* Node.js - [Install Node.js 22](https://nodejs.org/en/), including the NPM package management tool.
-* Docker - [Install Docker community edition](https://hub.docker.com/search/?type=edition&offering=community)
+## How login works
 
-To build and deploy your application for the first time, run the following in your shell:
+1. The user signs in on the frontend. The `amazon-cognito-identity-js` library talks to Cognito and receives an **ID token**.
+2. The library keeps the session in the browser's local storage, so the user stays signed in until they sign out.
+3. Every API request goes through one helper (`authFetch`), which attaches the ID token in the `Authorization` header. The raw token is sent, with no `Bearer ` prefix.
+4. API Gateway's Cognito authorizer verifies the token. A missing or invalid token gets a `401` and the Lambda never runs.
+5. The Lambda reads the user's ID (`sub`) from the verified token. **The user ID never comes from the request body**, so a user cannot act as someone else.
+6. Updates and deletes include a condition that the task's `userId` matches the caller. Someone else's task returns `404`.
 
-```bash
+## API
+
+All routes require a valid ID token.
+
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/tasks` | List the caller's tasks |
+| POST | `/tasks` | Create a task (`title`, `status`) |
+| PUT | `/tasks/{id}` | Update a task's status |
+| DELETE | `/tasks/{id}` | Delete a task |
+
+Valid statuses: `not_started`, `pending`, `completed`.
+Errors: `401` no or invalid token, `400` invalid input, `404` task not found or not owned by the caller.
+
+## Project structure
+
+```
+.
+├── template.yaml        # SAM template: API, Lambdas, table, Cognito
+├── samconfig.toml       # Deploy settings (use the "auth" environment)
+├── src/                 # Lambda handlers (.mjs)
+├── events/              # Sample events for local testing with sam local invoke
+├── gsi.json             # Index definition for the local DynamoDB table
+└── frontend/
+    └── src/
+        ├── auth/cognito.js         # Cognito sign-up, sign-in, reset, sign-out
+        ├── api/tasksApi.js         # API calls, including authFetch
+        └── components/             # SignInPage, CodeInput, TaskForm, ...
+```
+
+## Run the frontend locally
+
+Requirements: Node.js and npm.
+
+1. Deploy the backend first (see below) and note the stack outputs: `ApiUrl`, `UserPoolId`, `UserPoolClientId`.
+2. In `frontend/`, create a file named `.env.local`:
+   ```
+   VITE_API_URL=https://<api-id>.execute-api.ap-south-1.amazonaws.com/Prod
+   VITE_USER_POOL_ID=<user-pool-id>
+   VITE_USER_POOL_CLIENT_ID=<app-client-id>
+   ```
+   Leave off the trailing slash on the API URL.
+3. Install and start:
+   ```
+   npm install
+   npm run dev
+   ```
+
+The API allows requests from **one** origin only (the `FrontendOrigin` parameter). To develop on `http://localhost:5173`, set `FrontendOrigin` to that and redeploy, then set it back for production.
+
+## Deploy the backend
+
+Requirements: AWS CLI (configured), AWS SAM CLI.
+
+```
 sam build
-sam deploy --guided
+sam deploy --config-env auth
 ```
 
-The first command will build the source of your application. The second command will package and deploy your application to AWS, with a series of prompts:
+Before answering `y` to the changeset prompt, check two things:
 
-* **Stack Name**: The name of the stack to deploy to CloudFormation. This should be unique to your account and region, and a good starting point would be something matching your project name.
-* **AWS Region**: The AWS region you want to deploy your app to.
-* **Confirm changes before deploy**: If set to yes, any change sets will be shown to you before execution for manual review. If set to no, the AWS SAM CLI will automatically deploy application changes.
-* **Allow SAM CLI IAM role creation**: Many AWS SAM templates, including this example, create AWS IAM roles required for the AWS Lambda function(s) included to access AWS services. By default, these are scoped down to minimum required permissions. To deploy an AWS CloudFormation stack which creates or modifies IAM roles, the `CAPABILITY_IAM` value for `capabilities` must be provided. If permission isn't provided through this prompt, to deploy this example you must explicitly pass `--capabilities CAPABILITY_IAM` to the `sam deploy` command.
-* **Save arguments to samconfig.toml**: If set to yes, your choices will be saved to a configuration file inside the project, so that in the future you can just re-run `sam deploy` without parameters to deploy changes to your application.
+- The `Parameter overrides` line shows `TableName` as `TasksTableAuth`.
+- The `Replacement` column is `False` for the table, the user pool and the app client. `True` would mean data or users would be destroyed.
 
-You can find your API Gateway Endpoint URL in the output values displayed after deployment.
+After a deploy that changes the API, publish the stage so the change goes live:
 
-## Use the SAM CLI to build and test locally
-
-Build your application with the `sam build` command.
-
-```bash
-aws-serverless-todo-api$ sam build
+```
+aws apigateway create-deployment --rest-api-id <api-id> --stage-name Prod --region ap-south-1
 ```
 
-The SAM CLI installs dependencies defined in `hello-world/package.json`, creates a deployment package, and saves it in the `.aws-sam/build` folder.
+## Deploy the frontend
 
-Test a single function by invoking it directly with a test event. An event is a JSON document that represents the input that the function receives from the event source. Test events are included in the `events` folder in this project.
+The frontend is deployed on Vercel from the `main` branch with the root directory set to `frontend`. Add these as environment variables in the Vercel project, then redeploy (they are read at build time):
 
-Run functions locally and invoke them with the `sam local invoke` command.
+| Name | Value |
+|---|---|
+| `VITE_API_URL` | The API URL from the stack outputs |
+| `VITE_USER_POOL_ID` | The user pool ID from the stack outputs |
+| `VITE_USER_POOL_CLIENT_ID` | The app client ID from the stack outputs |
 
-```bash
-aws-serverless-todo-api$ sam local invoke HelloWorldFunction --event events/event.json
-```
+These are public identifiers, not secrets, and they end up in the browser bundle. Never put a real secret in a `VITE_` variable.
 
-The SAM CLI can also emulate your application's API. Use the `sam local start-api` to run the API locally on port 3000.
+## Known limitations
 
-```bash
-aws-serverless-todo-api$ sam local start-api
-aws-serverless-todo-api$ curl http://localhost:3000/
-```
-
-The SAM CLI reads the application template to determine the API's routes and the functions that they invoke. The `Events` property on each function's definition includes the route and method for each path.
-
-```yaml
-      Events:
-        HelloWorld:
-          Type: Api
-          Properties:
-            Path: /hello
-            Method: get
-```
-
-## Add a resource to your application
-The application template uses AWS Serverless Application Model (AWS SAM) to define application resources. AWS SAM is an extension of AWS CloudFormation with a simpler syntax for configuring common serverless application resources such as functions, triggers, and APIs. For resources not included in [the SAM specification](https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md), you can use standard [AWS CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html) resource types.
-
-## Fetch, tail, and filter Lambda function logs
-
-To simplify troubleshooting, SAM CLI has a command called `sam logs`. `sam logs` lets you fetch logs generated by your deployed Lambda function from the command line. In addition to printing the logs on the terminal, this command has several nifty features to help you quickly find the bug.
-
-`NOTE`: This command works for all AWS Lambda functions; not just the ones you deploy using SAM.
-
-```bash
-aws-serverless-todo-api$ sam logs -n HelloWorldFunction --stack-name aws-serverless-todo-api --tail
-```
-
-You can find more information and examples about filtering Lambda function logs in the [SAM CLI Documentation](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-logging.html).
-
-## Unit tests
-
-Tests are defined in the `hello-world/tests` folder in this project. Use NPM to install the [Mocha test framework](https://mochajs.org/) and run unit tests.
-
-```bash
-aws-serverless-todo-api$ cd hello-world
-hello-world$ npm install
-hello-world$ npm run test
-```
-
-## Cleanup
-
-To delete the sample application that you created, use the AWS CLI. Assuming you used your project name for the stack name, you can run the following:
-
-```bash
-sam delete --stack-name aws-serverless-todo-api
-```
-
-## Resources
-
-See the [AWS SAM developer guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html) for an introduction to SAM specification, the SAM CLI, and serverless application concepts.
-
-Next, you can use AWS Serverless Application Repository to deploy ready to use Apps that go beyond hello world samples and learn how authors developed their applications: [AWS Serverless Application Repository main page](https://aws.amazon.com/serverless/serverlessrepo/)
+- The API accepts one allowed origin at a time.
+- If a session expires while the task page is open, an error shows instead of returning to the sign-in screen.
+- Cognito's built-in email sender has a low daily limit, which is fine for a small project but not for many users.
+- `ALLOW_USER_PASSWORD_AUTH` is still enabled on the app client for command-line testing and should be removed before real use.
+- Cross-user update and delete protection was tested locally with sample events, but not yet end to end against the live API.
